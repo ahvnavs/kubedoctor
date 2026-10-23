@@ -59,6 +59,26 @@ def diagnose_snapshot(snapshot: dict[str, Any]) -> list[Diagnosis]:
                 (Evidence(f"container/{cname}", f"OOMKilled with exit code {ended.get('exitCode', 137)}"),),
             ))
 
+    # Waiting state is transient between restarts. The kubelet's BackOff event is
+    # durable and keeps crash-loop diagnosis reliable across slower API polls.
+    backoff = next((
+        event for event in reversed(events)
+        if event.get("reason") == "BackOff"
+        and "restarting failed container" in event.get("message", "").lower()
+    ), None)
+    existing_codes = {item.code for item in found}
+    if backoff and not {"crash-loop", "oom-killed"} & existing_codes:
+        statuses = _statuses(pod)
+        cname = statuses[0].get("name", "container") if statuses else "container"
+        message = backoff.get("message", "kubelet is backing off container restarts")
+        found.append(Diagnosis(
+            "crash-loop", "Container repeatedly crashes",
+            "Inspect the previous container attempt; its logs usually contain the application error.",
+            Severity.CRITICAL, resource,
+            f"kubectl -n {namespace} logs {name} -c {cname} --previous",
+            (Evidence("event/BackOff", message),),
+        ))
+
     if pod.get("status", {}).get("phase") == "Pending" and not found:
         failed = [e for e in events if e.get("reason") == "FailedScheduling"]
         if failed:

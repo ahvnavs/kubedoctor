@@ -50,3 +50,21 @@ def test_oom_root_cause_suppresses_generic_crash_loop():
         "lastState": {"terminated": {"reason": "OOMKilled", "exitCode": 137}},
     })
     assert [item.code for item in diagnose_snapshot(snapshot)] == ["oom-killed"]
+
+
+def test_restart_backoff_event_covers_transient_container_state():
+    snapshot = snap(
+        {"state": {"terminated": {"reason": "Error", "exitCode": 1}}},
+        events=[{"reason": "BackOff", "message": "Back-off restarting failed container app"}],
+    )
+    diagnoses = diagnose_snapshot(snapshot)
+    assert [item.code for item in diagnoses] == ["crash-loop"]
+    assert diagnoses[0].evidence[0].source == "event/BackOff"
+
+
+def test_image_pull_backoff_event_is_not_misclassified_as_crash():
+    snapshot = snap(
+        {"state": {"waiting": {"reason": "ImagePullBackOff"}}},
+        events=[{"reason": "BackOff", "message": "Back-off pulling image missing"}],
+    )
+    assert [item.code for item in diagnose_snapshot(snapshot)] == ["image-pull"]
