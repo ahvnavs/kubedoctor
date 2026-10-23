@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubedoctor-lab
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: crash-loop
+  namespace: kubedoctor-lab
+  labels: {app: crash-loop}
+spec:
+  containers:
+    - name: app
+      image: python:3.12.12-slim-bookworm@sha256:593bd06efe90efa80dc4eee3948be7c0fde4134606dd40d8dd8dbcade98e669c
+      command: ["python", "-c", "raise RuntimeError('reproducible crash')"]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: image-pull
+  namespace: kubedoctor-lab
+  labels: {app: image-pull}
+spec:
+  containers:
+    - name: app
+      image: registry.invalid/kubedoctor/missing:never
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: oom-killed
+  namespace: kubedoctor-lab
+  labels: {app: oom-killed}
+spec:
+  containers:
+    - name: app
+      image: python:3.12.12-slim-bookworm@sha256:593bd06efe90efa80dc4eee3948be7c0fde4134606dd40d8dd8dbcade98e669c
+      command: ["python", "-c", "x = bytearray(128 * 1024 * 1024); print(len(x))"]
+      resources:
+        requests: {memory: 8Mi}
+        limits: {memory: 24Mi}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pending-capacity
+  namespace: kubedoctor-lab
+  labels: {app: pending-capacity}
+spec:
+  containers:
+    - name: app
+      image: python:3.12.12-slim-bookworm@sha256:593bd06efe90efa80dc4eee3948be7c0fde4134606dd40d8dd8dbcade98e669c
+      resources:
+        requests: {cpu: "1000"}
+
