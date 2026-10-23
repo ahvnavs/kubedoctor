@@ -1,6 +1,8 @@
 """Terminal rendering kept deliberately dependency free."""
 
 from collections.abc import Iterable
+from dataclasses import asdict
+import json
 
 from .models import Diagnosis
 
@@ -20,4 +22,8 @@ def render_text(diagnoses: Iterable[Diagnosis]) -> str:
             f"  Fix: {item.fix_command}"
         )
     return "\n\n".join(blocks)
+
+
+def render_json(diagnoses: Iterable[Diagnosis]) -> str:
+    return json.dumps([asdict(item) for item in diagnoses], indent=2)
 
