@@ -9,7 +9,7 @@ KubeDoctor reads pod status and events through the Kubernetes API, recognizes a 
   Inspect the previous container attempt; its logs usually contain the application error.
   Evidence:
   - container/api: waiting=CrashLoopBackOff, restarts=4
-  Fix: kubectl -n demo logs api-7d9d6 -c api --previous
+  Command: kubectl -n demo logs api-7d9d6 -c api --previous
 ```
 
 ## What it diagnoses
@@ -35,6 +35,7 @@ pip install -e .
 kubedoctor diagnose -n default
 kubedoctor diagnose -A -o json
 kubedoctor diagnose -n payments --pod api-7d9d6
+kubedoctor diagnose -n payments --show-stages
 ```
 
 Exit code `0` means no supported failure was found, `1` means diagnoses were printed, and `2` means configuration or API access failed. The current kubeconfig context is used unless `--context` is supplied.
@@ -92,6 +93,8 @@ flowchart LR
     Prometheus --> Output
     LLM --> Output
 ```
+
+The orchestration engine runs four isolated stages: deterministic rules, optional Prometheus context, optional explanation, and a command guard. `--show-stages` reports each stage as ready, disabled, or degraded. Optional failures never erase the core diagnosis, and the command guard rejects output that is not an explicit `kubectl` operation.
 
 The project stays intentionally narrow: pod-level diagnosis, one cluster per invocation, read-only collection, and four high-value failure families. It does not mutate workloads automatically or pretend that a generic resource value is safe for every application.
 

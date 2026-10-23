@@ -33,3 +33,20 @@ def test_pending_causes(message, title):
 
 def test_healthy_pod_has_no_diagnosis():
     assert diagnose_snapshot(snap({"state": {"running": {}}})) == []
+
+
+def test_specific_container_failure_suppresses_stale_scheduler_event():
+    snapshot = snap(
+        {"state": {"waiting": {"reason": "ImagePullBackOff"}}},
+        phase="Pending",
+        events=[{"reason": "FailedScheduling", "message": "node had untolerated taint"}],
+    )
+    assert [item.code for item in diagnose_snapshot(snapshot)] == ["image-pull"]
+
+
+def test_oom_root_cause_suppresses_generic_crash_loop():
+    snapshot = snap({
+        "state": {"waiting": {"reason": "CrashLoopBackOff"}},
+        "lastState": {"terminated": {"reason": "OOMKilled", "exitCode": 137}},
+    })
+    assert [item.code for item in diagnose_snapshot(snapshot)] == ["oom-killed"]

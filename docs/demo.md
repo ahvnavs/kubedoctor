@@ -13,7 +13,7 @@ kubectl --context kind-kubedoctor get pods -n kubedoctor-lab
 ## 2. Diagnose it
 
 ```sh
-kubedoctor diagnose --context kind-kubedoctor -n kubedoctor-lab
+kubedoctor diagnose --context kind-kubedoctor -n kubedoctor-lab --show-stages
 ```
 
 Connect each result to its evidence: restart count for the crash, the prior `OOMKilled` termination, the image pull runtime message, and the scheduler's insufficient-capacity event.

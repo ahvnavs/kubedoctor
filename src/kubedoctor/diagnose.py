@@ -31,7 +31,8 @@ def diagnose_snapshot(snapshot: dict[str, Any]) -> list[Diagnosis]:
         previous = (container.get("lastState") or {}).get("terminated") or {}
         reason = waiting.get("reason")
 
-        if reason == "CrashLoopBackOff":
+        oom_killed = terminated.get("reason") == "OOMKilled" or previous.get("reason") == "OOMKilled"
+        if reason == "CrashLoopBackOff" and not oom_killed:
             found.append(Diagnosis(
                 "crash-loop", "Container repeatedly crashes",
                 "Inspect the previous container attempt; its logs usually contain the application error.",
@@ -49,16 +50,16 @@ def diagnose_snapshot(snapshot: dict[str, Any]) -> list[Diagnosis]:
                 (Evidence(f"container/{cname}", f"{reason}: {message}"),),
             ))
         ended = terminated if terminated.get("reason") == "OOMKilled" else previous
-        if ended.get("reason") == "OOMKilled":
+        if oom_killed:
             found.append(Diagnosis(
                 "oom-killed", "Container exceeded its memory limit",
                 "Raise the workload memory limit after checking actual usage and application behavior.",
                 Severity.CRITICAL, resource,
-                f"kubectl -n {namespace} edit {resource}",
+                f"kubectl -n {namespace} describe pod {name}",
                 (Evidence(f"container/{cname}", f"OOMKilled with exit code {ended.get('exitCode', 137)}"),),
             ))
 
-    if pod.get("status", {}).get("phase") == "Pending":
+    if pod.get("status", {}).get("phase") == "Pending" and not found:
         failed = [e for e in events if e.get("reason") == "FailedScheduling"]
         if failed:
             message = failed[-1].get("message", "scheduler could not place the pod")

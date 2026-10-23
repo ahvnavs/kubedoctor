@@ -25,16 +25,21 @@ case "${1:-}" in
       trap 'rm -f "$tmp"' EXIT
     fi
     deadline=$((SECONDS + 180))
+    observed=""
     while (( SECONDS < deadline )); do
       output=$("$doctor" diagnose -n kubedoctor-lab -o json || true)
-      python - "$output" <<'PY' && exit 0 || true
+      state=$(python - "$output" "$observed" <<'PY'
 import json, sys
-codes = {item["code"] for item in json.loads(sys.argv[1])}
+codes = {item["code"] for item in json.loads(sys.argv[1])} | set(filter(None, sys.argv[2].split(",")))
 required = {"crash-loop", "oom-killed", "image-pull", "pending-unschedulable"}
 missing = required - codes
-print("detected:", ", ".join(sorted(codes)), "missing:", ", ".join(sorted(missing)))
-raise SystemExit(bool(missing))
+print(f"{','.join(sorted(codes))}|{','.join(sorted(missing))}")
 PY
+      )
+      observed=${state%%|*}
+      missing=${state#*|}
+      echo "detected: ${observed//,/ , } missing: ${missing//,/ , }"
+      [[ -z "$missing" ]] && exit 0
       sleep 5
     done
     echo "Timed out waiting for all failure modes" >&2
