@@ -25,4 +25,5 @@ class Diagnosis:
     resource: str
     fix_command: str
     evidence: tuple[Evidence, ...] = field(default_factory=tuple)
+    explanation: str | None = None
 

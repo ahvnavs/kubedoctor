@@ -20,6 +20,7 @@ def render_text(diagnoses: Iterable[Diagnosis]) -> str:
             f"  {item.summary}\n"
             f"  Evidence:\n{evidence or '  - none'}\n"
             f"  Fix: {item.fix_command}"
+            + (f"\n  Explanation: {item.explanation}" if item.explanation else "")
         )
     return "\n\n".join(blocks)
 
