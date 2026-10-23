@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kube-doctor"
+version = "0.1.0"
+description = "A focused CLI for explaining common Kubernetes pod failures."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Abhinav Sharma" }]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest==8.4.2", "ruff==0.14.2"]
+
+[project.scripts]
+kubedoctor = "kubedoctor.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kubedoctor"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
